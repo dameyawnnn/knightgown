@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knight Gown — Technical Specification</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#15120d;
+    --void-2:#1c1811;
+    --bone:#e8e1d1;
+    --bone-2:#ddd4bf;
+    --ink:#1c1712;
+    --oxblood:#8a3327;
+    --oxblood-dim:#6b2b23;
+    --steel:#a29c8e;
+    --steel-dim:#6f6a5f;
+    --khaki:#b8a97a;
+    --rule: rgba(232,225,209,0.16);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--void);
+    color:var(--bone);
+    font-family:'Fraunces', serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+  a{color:inherit;}
+  .wrap{max-width:900px; margin:0 auto; padding:0 24px;}
+  @media (max-width:600px){ .wrap{padding:0 16px;} }
+
+  header{
+    border-bottom:1px solid var(--rule);
+    padding:20px 0;
+    position:sticky; top:0;
+    background:rgba(21,18,13,0.92);
+    backdrop-filter:blur(6px);
+    z-index:10;
+  }
+  header .wrap{display:flex; justify-content:space-between; align-items:center;}
+  .back-link{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.05em; color:var(--steel); text-decoration:none;}
+  .back-link:hover{color:var(--bone);}
+  .doc-label{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:var(--oxblood);}
+
+  .title-block{padding:56px 0 32px;}
+  .title-block h1{font-size:clamp(34px,6vw,54px); font-weight:500; margin:0 0 10px; letter-spacing:-0.01em;}
+  .title-block p{color:var(--khaki); font-style:italic; font-size:15px; margin:0;}
+
+  .ref-panel{
+    background:var(--bone); color:var(--ink);
+    display:grid; grid-template-columns:1fr 1fr;
+    gap:0; margin-bottom:56px;
+  }
+  @media (max-width:520px){ .ref-panel{grid-template-columns:1fr;} }
+  .ref-cell{
+    padding:14px 20px;
+    border-bottom:1px solid rgba(28,23,18,0.12);
+    border-right:1px solid rgba(28,23,18,0.12);
+  }
+  .ref-cell:nth-child(2n){border-right:none;}
+  @media (max-width:520px){ .ref-cell{border-right:none;} }
+  .ref-cell .k{font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:0.06em; color:var(--oxblood-dim); display:block; margin-bottom:4px;}
+  .ref-cell .v{font-size:14px;}
+
+  section{padding-bottom:64px; border-bottom:1px solid var(--rule); margin-bottom:56px;}
+  section:last-of-type{border-bottom:none;}
+  .sec-num{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--oxblood); letter-spacing:0.08em; display:block; margin-bottom:6px;}
+  h2{font-size:clamp(24px,4vw,32px); font-weight:500; margin:0 0 24px; letter-spacing:-0.01em;}
+  h3{font-size:15px; font-weight:600; font-family:'IBM Plex Mono',monospace; letter-spacing:0.04em; color:var(--khaki); margin:32px 0 14px; text-transform:uppercase;}
+  p.body-text{font-size:16px; font-weight:300; color:#d8d1c1; max-width:640px;}
+  p.small-note{font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--steel-dim); max-width:640px;}
+
+  .feature-cols{display:grid; grid-template-columns:1fr 1fr; gap:2px; background:var(--rule); margin-top:8px;}
+  @media (max-width:560px){ .feature-cols{grid-template-columns:1fr;} }
+  .feature-col{background:var(--void); padding:20px 22px;}
+  .feature-col .label{font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.06em; color:var(--oxblood); margin-bottom:12px; display:block;}
+  .feature-col ul{margin:0; padding-left:18px; font-size:14px; color:var(--steel); font-weight:300;}
+  .feature-col li{margin-bottom:7px;}
+
+  .table-scroll{overflow-x:auto; margin-top:8px; -webkit-overflow-scrolling:touch;}
+  table{
+    border-collapse:collapse;
+    width:100%;
+    min-width:560px;
+    background:var(--bone);
+    color:var(--ink);
+    font-size:12.5px;
+  }
+  table.wide{min-width:820px;}
+  th, td{
+    padding:10px 12px;
+    text-align:left;
+    border:1px solid rgba(28,23,18,0.15);
+    font-family:'IBM Plex Mono',monospace;
+    vertical-align:top;
+  }
+  th{
+    background:var(--bone-2);
+    font-weight:600;
+    font-size:10.5px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    color:var(--oxblood-dim);
+  }
+  td{font-size:12px;}
+
+  .mini-table{max-width:480px;}
+
+  footer{padding:48px 0 64px; text-align:center;}
+  footer .mono{font-size:10.5px; color:var(--steel-dim); letter-spacing:0.04em;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <span class="doc-label mono">TECH SPEC — KNIGHT GOWN</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <div class="title-block">
+    <h1>Technical Specification</h1>
+    <p>Avant-Garde Garment — "Knight Gown"</p>
+  </div>
+
+  <div class="ref-panel mono">
+    <div class="ref-cell"><span class="k">GARMENT NAME</span><span class="v">Knight Gown</span></div>
+    <div class="ref-cell"><span class="k">CATEGORY</span><span class="v">Avant-Garde Evening Gown / Structured Coat-Dress Hybrid</span></div>
+    <div class="ref-cell"><span class="k">REFERENCE NO.</span><span class="v">AG-204-T</span></div>
+    <div class="ref-cell"><span class="k">VERSION</span><span class="v">3.0 — Factory Ready</span></div>
+    <div class="ref-cell"><span class="k">DATE</span><span class="v">2026-09-09</span></div>
+    <div class="ref-cell"><span class="k">SAMPLE SIZE</span><span class="v">Size 12 (UK) — graded 4–16</span></div>
+    <div class="ref-cell"><span class="k">STATUS</span><span class="v">Approved for Manufacturing</span></div>
+  </div>
+
+  <section>
+    <span class="sec-num mono">DESIGN SUMMARY</span>
+    <h2>Overview</h2>
+    <p class="body-text">A structured, asymmetrical evening gown combining a sculpted, cap-sleeve bodice with a draped and folded cowl collar. The panelled bodice wraps diagonally across the torso, anchored by a geometric peplum with tiered, angular layers. A high-low, floor-length skirt falls in soft, draped tiers beneath the structured peplum. The back is finished with an open jute-mesh inset across the bodice and peplum, exposing a raw, textural contrast to the coated linen self fabric, and closes with a centre-back concealed zipper.</p>
+
+    <div class="feature-cols">
+      <div class="feature-col">
+        <span class="label">FRONT FEATURES</span>
+        <ul>
+          <li>Asymmetrical folded collar</li>
+          <li>Panelled bodice</li>
+          <li>Structured gathers at peplum</li>
+          <li>Tiered skirt layers</li>
+          <li>High-low hem</li>
+          <li>Raw edge / fraying detail at hem</li>
+        </ul>
+      </div>
+      <div class="feature-col">
+        <span class="label">BACK FEATURES</span>
+        <ul>
+          <li>Mesh inset panels across bodice</li>
+          <li>Centre-back concealed zipper</li>
+          <li>Reinforced seam details</li>
+          <li>Gathers at peplum</li>
+          <li>Hooded, folded collar with draped cowl</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num mono">SECTION 01</span>
+    <h2>Bill of Materials</h2>
+    <div class="table-scroll">
+      <table class="wide">
+        <tr><th>Item</th><th>Description</th><th>Specification</th><th>Supplier</th><th>Colour</th><th>Yield</th><th>Unit</th><th>Notes</th></tr>
+        <tr><td>1</td><td>Self Fabric 1</td><td>Coated Linen Blend</td><td>Attern Fabrics</td><td>Jet Black</td><td>6.5</td><td>m</td><td>Cut all sleeve and peplum panels</td></tr>
+        <tr><td>2</td><td>Accent Mesh</td><td>Jute Mesh, open weave</td><td>Vaglietie Textiles</td><td>Charcoal Bronze</td><td>1.2</td><td>m</td><td>Back bodice and peplum insets</td></tr>
+        <tr><td>3</td><td>Fusible Interlining</td><td>Woven fusible, medium weight</td><td>Regola Interfacing Co.</td><td>Black</td><td>0.8</td><td>m</td><td>Collar and facing panels</td></tr>
+        <tr><td>4</td><td>Topstitching Thread</td><td>Polyester core, 3mm stitch</td><td>Stack Threads</td><td>Black</td><td>1/2 cone</td><td>cone</td><td>—</td></tr>
+        <tr><td>5</td><td>Overlock Thread</td><td>Polyester, standard</td><td>Stack Threads</td><td>Black</td><td>1 cone</td><td>cone</td><td>—</td></tr>
+        <tr><td>6</td><td>Concealed Zipper</td><td>Invisible, 118cm length, 18cm tape</td><td>—</td><td>Black</td><td>1</td><td>pc</td><td>Placement: centre back</td></tr>
+        <tr><td>7</td><td>Care Label</td><td>Printed satin</td><td>Phoenix Labels</td><td>Black on White</td><td>1</td><td>pc</td><td>Inside CB seam allowance, 10cm from neckline</td></tr>
+        <tr><td>8</td><td>Brand Label</td><td>Woven satin</td><td>Phoenix Labels</td><td>Black / Silver</td><td>1</td><td>pc</td><td>Placement: centre back neck</td></tr>
+      </table>
+    </div>
+
+    <div class="table-scroll mini-table">
+      <table>
+        <tr><td class="mono" style="font-weight:600;">Est. Garment Weight</td><td>1.2 kg (based on sample)</td></tr>
+        <tr><td class="mono" style="font-weight:600;">Prototype Approval</td><td>Required before bulk cut</td></tr>
+      </table>
+    </div>
+
+    <h3>Fabric and Finish Notes</h3>
+    <div class="table-scroll">
+      <table>
+        <tr><th>Fabric</th><th>Composition</th><th>Handling Notes</th></tr>
+        <tr><td>Fabric 1 — Self</td><td>Coated Linen Blend</td><td>Heavy, structured drape with a matte coated finish; holds sharp folds for the panelled bodice and collar.</td></tr>
+        <tr><td>Fabric 2 — Accent</td><td>Jute Mesh, open weave</td><td>Rigid open-grid mesh used for back bodice insets and peplum tiers; frays intentionally at raw edges.</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num mono">SECTION 02</span>
+    <h2>Point of Measure and Grading</h2>
+    <div class="table-scroll">
+      <table>
+        <tr><th>Pt.</th><th>POM Point</th><th>Description</th></tr>
+        <tr><td>1</td><td>HPS to Hem</td><td>Full-length vertical measure from highest shoulder point to longest point of the high-low hem</td></tr>
+        <tr><td>2</td><td>HPS to Waist</td><td>Vertical measure from high point shoulder to natural waist</td></tr>
+        <tr><td>3</td><td>Chest Circumference</td><td>Measured 1" below armhole, garment flat, relaxed</td></tr>
+        <tr><td>4</td><td>Waist Circumference</td><td>Measured at natural waistline, garment flat, relaxed</td></tr>
+        <tr><td>5</td><td>Hip Circumference</td><td>Measured at fullest point of hip, garment flat, relaxed</td></tr>
+        <tr><td>6</td><td>Neck Width</td><td>Straight measure across back neck seam</td></tr>
+        <tr><td>7</td><td>Front Neck Drop</td><td>Vertical measure from HPS to front neckline seam</td></tr>
+        <tr><td>8</td><td>Back Neck Drop</td><td>Vertical measure from HPS to back neckline seam</td></tr>
+      </table>
+    </div>
+
+    <h3>Graded Measurement Chart (cm)</h3>
+    <p class="small-note">Sample size: UK 12. All measurements taken with garment flat and relaxed, not stretched.</p>
+    <div class="table-scroll">
+      <table class="wide">
+        <tr><th>POM (cm)</th><th>UK 4</th><th>UK 6</th><th>UK 8</th><th>UK 10</th><th>UK 12</th><th>UK 14</th><th>UK 16</th></tr>
+        <tr><td>1 — HPS to Hem</td><td>64</td><td>66</td><td>68</td><td>70</td><td>72 (sample)</td><td>74</td><td>76</td></tr>
+        <tr><td>3 — Chest</td><td>50</td><td>52</td><td>54</td><td>56</td><td>58</td><td>60</td><td>62</td></tr>
+        <tr><td>4 — Waist</td><td>36</td><td>38</td><td>40</td><td>42</td><td>44</td><td>46</td><td>48</td></tr>
+        <tr><td>5 — Hip</td><td>26.5</td><td>28</td><td>29.5</td><td>31</td><td>32.5</td><td>34</td><td>35.5</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num mono">SECTION 03</span>
+    <h2>Pattern Piece List</h2>
+    <p class="small-note">Piece codes and cut quantities for full production. Codes correspond to the flat pattern layout; a full-scale CAD file (1:1) is required for cutting — the diagram at 1:10 scale is for reference only.</p>
+    <div class="table-scroll">
+      <table class="wide">
+        <tr><th>Piece Code</th><th>Description</th><th>Self</th><th>Lining</th><th>Mesh</th><th>Notes</th></tr>
+        <tr><td>KNGT-FBD-01</td><td>Front Bodice, Left</td><td>1</td><td>1</td><td>—</td><td>Interface all collar attachment points</td></tr>
+        <tr><td>KNGT-FBD-02</td><td>Front Bodice, Right</td><td>1</td><td>1</td><td>—</td><td>Interface all collar attachment points</td></tr>
+        <tr><td>KNGT-BBD-01</td><td>Back Bodice, L/R (fold or pair)</td><td>2</td><td>2</td><td>2</td><td>Interface all collar attachment points</td></tr>
+        <tr><td>KNGT-CLR-A</td><td>Collar Part A — Front</td><td>1</td><td>1</td><td>—</td><td>Cut 1 self, 1 fusing</td></tr>
+        <tr><td>KNGT-CLR-B</td><td>Collar Part B — Back</td><td>1</td><td>1</td><td>—</td><td>Cut 1 self, 1 fusing</td></tr>
+        <tr><td>KNGT-CLR-C</td><td>Collar Part C — Hood/Cowl Facing</td><td>1</td><td>1</td><td>—</td><td>Cut 1 self, 1 fusing</td></tr>
+        <tr><td>KNGT-FPP-1A</td><td>Front Peplum Tier 1</td><td>1</td><td>—</td><td>—</td><td>Hem notch at lower edge</td></tr>
+        <tr><td>KNGT-FPP-1B</td><td>Front Peplum Tier 2</td><td>1</td><td>—</td><td>—</td><td>Seam allowance 1.0cm unless noted</td></tr>
+        <tr><td>KNGT-FPP-1C</td><td>Front Peplum Tier 3</td><td>1</td><td>—</td><td>—</td><td>Creates the multi-layered peplum</td></tr>
+        <tr><td>KNGT-BPP-1A</td><td>Back Peplum Mesh Tier 1</td><td>—</td><td>—</td><td>1</td><td>Match peplum layers precisely</td></tr>
+        <tr><td>KNGT-BPP-1B</td><td>Back Peplum Mesh Tier 2</td><td>—</td><td>—</td><td>1</td><td>Seam allowance 1.0cm unless noted</td></tr>
+        <tr><td>KNGT-BPP-1C</td><td>Back Peplum Mesh Tier 3</td><td>—</td><td>—</td><td>1</td><td>Match peplum layers precisely</td></tr>
+        <tr><td>KNGT-SBT-A1</td><td>Front Skirt Side Panel</td><td>1</td><td>—</td><td>—</td><td>Cut 1 self, pair to opposite side</td></tr>
+        <tr><td>KNGT-SBT-A2</td><td>Front Skirt Side Panel, Opposite</td><td>1</td><td>—</td><td>—</td><td>Contoured to hem, high-low hem</td></tr>
+        <tr><td>KNGT-SBT-C</td><td>Centre Back Skirt Panel</td><td>1</td><td>1</td><td>—</td><td>Seam allowance 1.0cm unless noted</td></tr>
+        <tr><td>KNGT-SST-1</td><td>Front Skirt Side Panel Variant</td><td>1</td><td>—</td><td>—</td><td>Hem notch at lower edge</td></tr>
+        <tr><td>KNGT-SST-2</td><td>Front Skirt Side Panel Variant 2</td><td>1</td><td>—</td><td>—</td><td>Contoured to form high-low hem</td></tr>
+        <tr><td>KNGT-POC-A1</td><td>Pocket Bag</td><td>2</td><td>—</td><td>—</td><td>Cut 1 pair</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <span class="sec-num mono">REFERENCE</span>
+    <h2>Stitch, Construction and Notation Keys</h2>
+
+    <h3>Stitch and Construction Legend</h3>
+    <div class="table-scroll">
+      <table>
+        <tr><th>Symbol / Term</th><th>Meaning</th></tr>
+        <tr><td>Topstitching (3mm)</td><td>Solid line, 3mm from edge</td></tr>
+        <tr><td>Reinforced Seam</td><td>Double-stitched, bar-tacked at stress points</td></tr>
+        <tr><td>Overlock</td><td>Applied to all raw internal seam edges except designed raw-edge details</td></tr>
+        <tr><td>Raw Edge Finish</td><td>Deliberately unfinished edge — mesh and select hem panels only</td></tr>
+        <tr><td>Blind Hem</td><td>Used on lining hem only</td></tr>
+      </table>
+    </div>
+
+    <h3>Pattern Notation and Notch Key</h3>
+    <div class="table-scroll">
+      <table>
+        <tr><th>Symbol / Term</th><th>Meaning</th></tr>
+        <tr><td>Grainline</td><td>Arrow indicates fabric grain direction</td></tr>
+        <tr><td>Notch (Standard)</td><td>Single triangle — seam match point</td></tr>
+        <tr><td>Double Notch</td><td>Paired triangles — indicates back piece or second layer</td></tr>
+        <tr><td>Drill Hole (Dart)</td><td>Marks dart point / internal construction mark</td></tr>
+        <tr><td>Fold Line</td><td>Piece is cut on the fold</td></tr>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<footer>
+  <div class="mono">KNIGHT GOWN — TECHNICAL SPECIFICATION</div>
+</footer>
+
+</body>
+</html>
