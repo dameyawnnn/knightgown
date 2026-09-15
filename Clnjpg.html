@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Photo Metadata Cleaner</title>
+<style>
+  body{
+    font-family:-apple-system, sans-serif;
+    max-width:600px;
+    margin:40px auto;
+    padding:0 20px;
+    background:#111;
+    color:#eee;
+  }
+  h2{font-size:20px;}
+  input[type=file]{
+    width:100%;
+    padding:14px;
+    font-size:14px;
+    margin:14px 0;
+    border:1px dashed #555;
+    background:#1c1c1c;
+    color:#eee;
+    box-sizing:border-box;
+  }
+  button{
+    width:100%;
+    padding:14px;
+    font-size:14px;
+    background:#8a3327;
+    color:#fff;
+    border:none;
+    cursor:pointer;
+    margin-top:10px;
+  }
+  button:disabled{ background:#555; }
+  pre{
+    background:#1c1c1c;
+    padding:14px;
+    font-size:12px;
+    overflow-x:auto;
+    white-space:pre-wrap;
+    word-break:break-all;
+    border:1px solid #333;
+  }
+  .status{ font-size:13px; color:#aaa; margin:10px 0; }
+  .ok{ color:#7bbf7b; }
+  .err{ color:#e08a7d; }
+  img.preview{ max-width:100%; margin-top:12px; border:1px solid #333; }
+  .filelist{ margin-top:16px; }
+  .fileitem{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-bottom:1px solid #333; font-size:13px;
+  }
+  .fileitem button{ width:auto; padding:8px 14px; margin:0; font-size:12px; }
+</style>
+</head>
+<body>
+
+<h2>Photo Metadata Cleaner</h2>
+<p style="color:#aaa; font-size:13px;">Pick photos straight from your device — nothing is uploaded anywhere, it's processed right here in your browser. This strips EXIF metadata (GPS location, device/camera model, timestamps, etc.) by re-encoding the image. You can select multiple photos at once.</p>
+
+<input type="file" id="fileInput" accept="image/*" multiple>
+
+<div class="status" id="status"></div>
+<div class="filelist" id="fileList"></div>
+
+<script>
+const statusEl = document.getElementById('status');
+const fileListEl = document.getElementById('fileList');
+
+function setStatus(msg, cls) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status ' + (cls || '');
+}
+
+// Lightweight check for the presence of EXIF (APP1 "Exif" marker) in a JPEG,
+// purely informational — cleaning happens regardless via canvas re-encode.
+function hasExif(bytes) {
+  if (bytes[0] !== 0xFF || bytes[1] !== 0xD8) return false; // not a JPEG
+  let offset = 2;
+  while (offset < bytes.length - 4) {
+    if (bytes[offset] !== 0xFF) break;
+    const marker = bytes[offset + 1];
+    if (marker === 0xE1) {
+      const tag = String.fromCharCode(bytes[offset+4], bytes[offset+5], bytes[offset+6], bytes[offset+7]);
+      if (tag === 'Exif') return true;
+    }
+    if (marker === 0xDA) break; // start of scan, no more markers before image data
+    const segLen = (bytes[offset+2] << 8) | bytes[offset+3];
+    offset += 2 + segLen;
+  }
+  return false;
+}
+
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  fileListEl.innerHTML = '';
+  setStatus(`Loaded ${files.length} photo(s).`, 'ok');
+
+  for (const file of files) {
+    const row = document.createElement('div');
+    row.className = 'fileitem';
+
+    const bytes = new Uint8Array(await file.slice(0, 65536).arrayBuffer());
+    const exifFound = hasExif(bytes);
+
+    const label = document.createElement('span');
+    label.textContent = `${file.name} — ${(file.size/1e6).toFixed(2)} MB${exifFound ? ' (EXIF found)' : ''}`;
+    row.appendChild(label);
+
+    const btn = document.createElement('button');
+    btn.textContent = 'Clean & Save';
+    btn.addEventListener('click', () => cleanAndDownload(file, btn));
+    row.appendChild(btn);
+
+    fileListEl.appendChild(row);
+  }
+});
+
+async function cleanAndDownload(file, btn) {
+  btn.disabled = true;
+  btn.textContent = 'Working…';
+
+  const img = new Image();
+  const url = URL.createObjectURL(file);
+
+  img.onload = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0);
+    URL.revokeObjectURL(url);
+
+    const outType = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const quality = outType === 'image/jpeg' ? 0.95 : undefined;
+
+    canvas.toBlob(async (blob) => {
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      const ext = outType === 'image/png' ? '.png' : '.jpg';
+      const outName = baseName + '-cleaned' + ext;
+      const outFile = new File([blob], outName, { type: outType });
+
+      if (navigator.canShare && navigator.canShare({ files: [outFile] })) {
+        try {
+          await navigator.share({ files: [outFile], title: outName });
+          btn.textContent = 'Done';
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            triggerDownload(blob, outName);
+            btn.textContent = 'Downloaded';
+          } else {
+            btn.textContent = 'Clean & Save';
+            btn.disabled = false;
+          }
+        }
+      } else {
+        triggerDownload(blob, outName);
+        btn.textContent = 'Downloaded';
+      }
+    }, outType, quality);
+  };
+
+  img.onerror = () => {
+    setStatus('Could not load ' + file.name, 'err');
+    btn.textContent = 'Failed';
+  };
+
+  img.src = url;
+}
+
+function triggerDownload(blob, name) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+}
+</script>
+
+</body>
+</html>
