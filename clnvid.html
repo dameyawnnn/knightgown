@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Video Metadata Cleaner</title>
+<style>
+  body{
+    font-family:-apple-system, sans-serif;
+    max-width:600px;
+    margin:40px auto;
+    padding:0 20px;
+    background:#111;
+    color:#eee;
+  }
+  h2{font-size:20px;}
+  input[type=file]{
+    width:100%;
+    padding:14px;
+    font-size:14px;
+    margin:14px 0;
+    border:1px dashed #555;
+    background:#1c1c1c;
+    color:#eee;
+    box-sizing:border-box;
+  }
+  button{
+    width:100%;
+    padding:14px;
+    font-size:14px;
+    background:#8a3327;
+    color:#fff;
+    border:none;
+    cursor:pointer;
+    margin-top:10px;
+  }
+  button:disabled{ background:#555; }
+  pre{
+    background:#1c1c1c;
+    padding:14px;
+    font-size:12px;
+    overflow-x:auto;
+    white-space:pre-wrap;
+    word-break:break-all;
+    border:1px solid #333;
+  }
+  .status{ font-size:13px; color:#aaa; margin:10px 0; }
+  .ok{ color:#7bbf7b; }
+  .err{ color:#e08a7d; }
+</style>
+</head>
+<body>
+
+<h2>Video Metadata Cleaner</h2>
+<p style="color:#aaa; font-size:13px;">Pick an .mp4 straight from your device — nothing uploaded anywhere. This finds and removes any C2PA content-credential box embedded in the file. Unlike the photo tool, this doesn't re-encode the video at all — it surgically removes just the metadata box and leaves every video/audio byte untouched, so there's zero quality loss.</p>
+
+<input type="file" id="fileInput" accept="video/mp4,.mp4">
+
+<div class="status" id="status"></div>
+<pre id="before" style="display:none;"></pre>
+<button id="cleanBtn" style="display:none;">Clean &amp; Save</button>
+
+<script>
+const statusEl = document.getElementById('status');
+const beforeEl = document.getElementById('before');
+const cleanBtn = document.getElementById('cleanBtn');
+let currentBuffer = null;
+let foundBoxes = [];
+let filenameGuess = 'video-cleaned.mp4';
+
+// The UUID the C2PA spec defines for embedding credentials in ISOBMFF (MP4/MOV) files
+const C2PA_UUID = 'd8fec3d61b0e483c92975828877ec481';
+
+function setStatus(msg, cls) {
+  statusEl.textContent = msg;
+  statusEl.className = 'status ' + (cls || '');
+}
+
+function bytesToHex(bytes) {
+  return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+function findTopLevelBoxes(dv, start, end) {
+  const boxes = [];
+  let offset = start;
+  while (offset < end - 8) {
+    let size = dv.getUint32(offset, false);
+    const type = String.fromCharCode(
+      dv.getUint8(offset+4), dv.getUint8(offset+5),
+      dv.getUint8(offset+6), dv.getUint8(offset+7)
+    );
+    let headerLen = 8;
+    if (size === 1) {
+      // 64-bit extended size
+      const hi = dv.getUint32(offset+8, false);
+      const lo = dv.getUint32(offset+12, false);
+      size = hi * 4294967296 + lo;
+      headerLen = 16;
+    } else if (size === 0) {
+      size = end - offset;
+    }
+    boxes.push({ offset, size, type, headerLen });
+    offset += size;
+  }
+  return boxes;
+}
+
+document.getElementById('fileInput').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+  filenameGuess = file.name || 'video-cleaned.mp4';
+  setStatus('Reading file…');
+  beforeEl.style.display = 'none';
+  cleanBtn.style.display = 'none';
+  foundBoxes = [];
+
+  try {
+    const buf = await file.arrayBuffer();
+    currentBuffer = buf;
+    const dv = new DataView(buf);
+
+    const boxes = findTopLevelBoxes(dv, 0, buf.byteLength);
+    let report = [];
+    for (const box of boxes) {
+      report.push(`${box.type} @ ${box.offset}, size ${box.size}`);
+      if (box.type === 'uuid') {
+        const uuidBytes = new Uint8Array(buf, box.offset + 8, 16);
+        const hex = bytesToHex(uuidBytes);
+        report.push(`   uuid: ${hex}`);
+        if (hex === C2PA_UUID) {
+          foundBoxes.push(box);
+          report.push('   -> matches C2PA content credentials box');
+        }
+      }
+    }
+
+    beforeEl.style.display = 'block';
+    beforeEl.textContent = report.join('\n');
+    setStatus(
+      foundBoxes.length
+        ? `Found ${foundBoxes.length} C2PA box(es) to remove.`
+        : 'No C2PA box found — file may already be clean.',
+      'ok'
+    );
+    cleanBtn.style.display = 'block';
+    cleanBtn.disabled = foundBoxes.length === 0;
+
+  } catch (err) {
+    setStatus('Error: ' + err.message, 'err');
+    console.error(err);
+  }
+});
+
+cleanBtn.addEventListener('click', () => {
+  if (!currentBuffer || foundBoxes.length === 0) return;
+
+  const outBuf = currentBuffer.slice(0); // copy
+  const outBytes = new Uint8Array(outBuf);
+  const dv = new DataView(outBuf);
+
+  for (const box of foundBoxes) {
+    // Rewrite the box type from 'uuid' to 'free' (a standard ignorable box)
+    // and zero out its payload. Size field and file layout stay identical,
+    // so every other box's byte offsets (including sample data tables that
+    // point into mdat) remain valid — nothing else needs to change.
+    const freeType = [0x66, 0x72, 0x65, 0x65]; // 'free'
+    outBytes[box.offset+4] = freeType[0];
+    outBytes[box.offset+5] = freeType[1];
+    outBytes[box.offset+6] = freeType[2];
+    outBytes[box.offset+7] = freeType[3];
+    for (let i = box.offset + box.headerLen; i < box.offset + box.size; i++) {
+      outBytes[i] = 0;
+    }
+  }
+
+  const outName = filenameGuess.replace(/\.mp4$/i, '') + '-cleaned.mp4';
+  const blob = new Blob([outBuf], { type: 'video/mp4' });
+  const outFile = new File([blob], outName, { type: 'video/mp4' });
+
+  if (navigator.canShare && navigator.canShare({ files: [outFile] })) {
+    navigator.share({ files: [outFile], title: outName })
+      .then(() => setStatus('Choose "Save to Files" in the share sheet to keep it.', 'ok'))
+      .catch((err) => {
+        if (err.name !== 'AbortError') {
+          triggerDownload(blob, outName);
+        }
+      });
+  } else {
+    triggerDownload(blob, outName);
+  }
+
+  function triggerDownload(blob, name) {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = name;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setStatus('Cleaned file downloaded.', 'ok');
+  }
+});
+</script>
+
+</body>
+</html>
