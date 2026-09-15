@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="color-scheme" content="light dark">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Knight Gown — 3D Model</title>
+<script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --void:#15120d;
+    --void-2:#1c1811;
+    --bone:#e8e1d1;
+    --oxblood:#8a3327;
+    --steel:#a29c8e;
+    --steel-dim:#6f6a5f;
+    --khaki:#b8a97a;
+    --rule: rgba(232,225,209,0.16);
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--void);
+    color:var(--bone);
+    font-family:'Fraunces', serif;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+  }
+  .mono{font-family:'IBM Plex Mono', monospace;}
+
+  header{
+    padding:20px 24px;
+    border-bottom:1px solid var(--rule);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .doc-label{font-family:'IBM Plex Mono',monospace; font-size:11px; letter-spacing:0.08em; color:var(--oxblood);}
+  .title-inline{font-size:15px; color:var(--steel);}
+
+  main{flex:1; display:flex; flex-direction:column;}
+
+  .viewer-shell{
+    position:relative;
+    flex:1;
+    min-height:60vh;
+    background:
+      radial-gradient(ellipse at center, #1f1b14 0%, var(--void) 70%);
+  }
+  model-viewer{
+    width:100%;
+    height:100%;
+    min-height:60vh;
+    --poster-color: transparent;
+  }
+
+  .progress-bar{
+    display:block;
+    width:40%;
+    height:3px;
+    background:rgba(232,225,209,0.15);
+    position:absolute;
+    top:50%; left:50%;
+    transform:translate(-50%,-50%);
+    border-radius:2px;
+    overflow:hidden;
+  }
+  .progress-bar.hide{ display:none; }
+  .update-bar{ background:var(--khaki); width:0%; height:100%; }
+
+  .viewer-status{
+    position:absolute;
+    bottom:20px; left:50%;
+    transform:translateX(-50%);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.04em;
+    color:var(--steel);
+    text-align:center;
+    width:90%;
+  }
+  .viewer-status.error{ color:#c76a5f; }
+  .viewer-status.hide{ display:none; }
+
+  .hint{
+    position:absolute;
+    top:16px; left:50%;
+    transform:translateX(-50%);
+    font-family:'IBM Plex Mono',monospace;
+    font-size:10px;
+    letter-spacing:0.06em;
+    color:var(--steel-dim);
+    background:rgba(21,18,13,0.6);
+    padding:6px 12px;
+    border-radius:20px;
+    pointer-events:none;
+    transition:opacity 0.6s ease;
+  }
+  .hint.hide{ opacity:0; }
+
+  footer{
+    padding:18px 24px 28px;
+    border-top:1px solid var(--rule);
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  footer .mono{font-size:10.5px; color:var(--steel-dim); letter-spacing:0.04em;}
+  footer a{color:var(--khaki); text-decoration:none;}
+  footer a:hover{text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<header>
+  <span class="doc-label mono">KNIGHT GOWN — 3D MODEL</span>
+  <span class="title-inline mono" style="font-size:11px; letter-spacing:0.05em;">DIGITAL SAMPLE</span>
+</header>
+
+<main>
+  <div class="viewer-shell">
+    <model-viewer
+      id="gownViewer"
+      src="https://cdn.jsdelivr.net/gh/dameyawnnn/knightgown@main/knightgowndress.glb"
+      alt="Knight Gown — avant-garde evening gown, interactive 3D model"
+      camera-controls
+      auto-rotate
+      rotation-per-second="18deg"
+      shadow-intensity="1"
+      exposure="1"
+      environment-image="https://modelviewer.dev/shared-assets/environments/neutral.hdr"
+      camera-orbit="0deg 80deg 120%"
+      field-of-view="32deg">
+      <div class="progress-bar hide" slot="progress-bar">
+        <div class="update-bar"></div>
+      </div>
+    </model-viewer>
+    <div class="hint mono" id="hint">DRAG TO ROTATE — PINCH TO ZOOM</div>
+    <div class="viewer-status mono" id="viewerStatus">Loading model…</div>
+  </div>
+</main>
+
+<footer>
+  <span class="mono">KNIGHT GOWN — AVANT-GARDE GARMENT</span>
+  <a href="https://dameyawnnn.github.io/knightgown/damian-rangel-portfolio.html" class="mono">← BACK TO PORTFOLIO</a>
+</footer>
+
+<script>
+  const viewer = document.getElementById('gownViewer');
+  const status = document.getElementById('viewerStatus');
+  const hint = document.getElementById('hint');
+  const bar = viewer.querySelector('.progress-bar');
+  const updateBar = viewer.querySelector('.update-bar');
+
+  viewer.addEventListener('progress', (event) => {
+    const pct = Math.round(event.detail.totalProgress * 100);
+    updateBar.style.width = pct + '%';
+    bar.classList.toggle('hide', pct >= 100);
+    status.textContent = pct >= 100 ? '' : `Loading model… ${pct}%`;
+  });
+
+  viewer.addEventListener('load', () => {
+    status.classList.add('hide');
+    setTimeout(() => hint.classList.add('hide'), 3500);
+  });
+
+  viewer.addEventListener('error', (event) => {
+    status.classList.remove('hide');
+    status.classList.add('error');
+    status.textContent = "Couldn't load the 3D model — check the hosted file URL and that it's public.";
+    console.error('model-viewer failed to load src:', viewer.src, event.detail);
+  });
+</script>
+
+</body>
+</html>
